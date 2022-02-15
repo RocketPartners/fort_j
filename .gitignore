@@ -28,4 +28,4 @@ classes/
 /.project
 /.settings/
 /bin/
-/build/
+/build/.idea
