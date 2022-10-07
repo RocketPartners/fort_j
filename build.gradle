@@ -1,19 +1,133 @@
-apply plugin: 'eclipse'
-apply plugin: 'java'
-apply plugin: 'maven-publish'
+plugins {
+   id "java"
+   id "maven"
+}
 
-version = '1.0.0'
-group = 'com.github.wellsb1'
+group = "io.rocketpartners"
+version = "1.0.0"
+sourceCompatibility = "1.6"
 
-repositories { 
+ext {
+	// Run bash commands.
+	//
+	// opts:
+	// args -- command-line arguments
+	// captureOutput -- if true, return output (default: false)
+	// env -- Map of environment variables
+	// ignoreExitValue -- if true, fail when exit != 0 (default: false)
+	// quiet -- if true, don't print command-line (default: false)
+   // workingDir -- working directory
+	bash = { opts = [:] ->
+      opts += [
+         captureOutput: opts.captureOutput == null ? false : opts.captureOutput,
+         ignoreExitValue: opts.ignoreExitValue == null ? false : opts.ignoreExitValue,
+         quiet: opts.quiet == null ? false : opts.quiet
+      ]
+
+		def output
+
+		try {
+			exec {
+				if (opts.captureOutput) {
+               standardOutput = new ByteArrayOutputStream()
+               output = { -> standardOutput.toString() }
+            }
+
+				ignoreExitValue = opts.ignoreExitValue
+				opts.env?.each { key, val -> environment key, val }
+				opts.workingDir && workingDir(opts.workingDir)
+				commandLine = [ "bash", "-o", "pipefail", "-c", "${opts.args?.trim()} 2>&1" ]
+				opts.quiet || println(commandLine.join(" "))
+			}
+
+		   if (opts.captureOutput) { output() }
+		} catch (e) {
+			if (opts.captureOutput) { println(output()) }
+			throw e
+		}
+	}
+
+	// Run git commands.
+	//
+	// opts:
+	// args -- command-line args
+	// defaultValue -- value to return if no output or error
+	git = { opts=[:] ->
+		try {
+			def result = file(".git").exists() ? bash(opts + [args: "git ${opts.args}".trim()]) : ""
+			result ?: opts.defaultValue
+		} catch(Exception e) {
+			if (opts.defaultValue) { return opts.defaultValue }
+			throw e
+		}
+	}
+
+   // Get git author.
+   //
+   // opts:
+   // format -- format (default: "%an")
+   gitGetAuthor = { opts=[:] ->
+      opts += [format: opts.format ?: "%an", captureOutput: true]
+      git(opts + [args: "--no-pager show -s --format='${opts.format}'"])?.trim()
+   }
+
+   isReleaseBranch = { opts=[:] ->
+      opts += [branch: opts.branch ?: project.branch]
+      opts.branch ==~ /^main$|^master$|^release-.*/
+   }
+
+   archiveRepo = [
+      url: "https://maven.pkg.github.com/RocketPartners/artifacts",
+      user: System.env.GHP_USER,
+      password: System.env.GHP_PASSWORD
+   ]
+   println "archiveRepo: $archiveRepo"
+
+   branch = git(args: "rev-parse --abbrev-ref HEAD", captureOutput: true, ignoreExitValue: false,
+		defaultValue: "(branch)")?.trim()
+   !isReleaseBranch() && (project.version += "-SNAPSHOT")
+}
+
+repositories {
    mavenLocal()
-   mavenCentral() 
+
+   maven {
+      url archiveRepo.url
+      credentials {
+         username archiveRepo.user
+         password archiveRepo.password
+      }
+   }
+
+   mavenCentral()
 }
 
-sourceCompatibility = 1.6
+uploadArchives {
+	repositories {
+		mavenDeployer {
+			repository(url: archiveRepo.url) {
+				authentication(userName: archiveRepo.user, password: archiveRepo.password)
+			}
+		}
+	}
 
-jar {
-    baseName 'forty11-j'
+	doFirst {
+		println "${jar.archiveName} -> ${archiveRepo.url}"
+	}
 }
 
+task gitTag {
+   enabled = isReleaseBranch()
+   mustRunAfter uploadArchives
 
+   doLast {
+      git args: "config user.name '${gitGetAuthor()}'"
+      git args: "config user.email ${gitGetAuthor(format: '%ae')}"
+      git args: "tag -am 'tag ${project.version}' ${project.version}"
+      git args: "push --tags"
+   }
+}
+
+task publish {
+   dependsOn uploadArchives, gitTag
+}

@@ -1,0 +1,29 @@
+on:
+  push:
+    branches:
+      - '*'
+jobs:
+  Job:
+    runs-on: ubuntu-latest
+    env:
+      GHP_USER: ${{ secrets.GHP_USER }}
+      GHP_PASSWORD: ${{ secrets.GHP_PASSWORD }}
+    steps:
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: corretto
+          java-version: "8"
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Build
+        run: ./gradlew clean assemble
+
+      - name: Publish
+        run: ./gradlew publish
+
+      # - name: Notify
+      #   if: ${{ always() }}
+      #   ...
