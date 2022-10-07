@@ -3,7 +3,7 @@ plugins {
    id "maven"
 }
 
-group = "rocketpartners"
+group = "io.rocketpartners"
 version = "0.0.4"
 sourceCompatibility = "1.6"
 
