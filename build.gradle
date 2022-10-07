@@ -81,6 +81,7 @@ ext {
       user: System.env.GHP_USER,
       password: System.env.GHP_PASSWORD
    ]
+   println "archiveRepo: $archiveRepo"
 
    branch = git(args: "rev-parse --abbrev-ref HEAD", captureOutput: true, ignoreExitValue: false,
 		defaultValue: "(branch)")?.trim()
