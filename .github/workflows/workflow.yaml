@@ -13,7 +13,7 @@ jobs:
         uses: actions/setup-java@v3
         with:
           distribution: corretto
-          java-version: "11"
+          java-version: "8"
 
       - name: Checkout
         uses: actions/checkout@v3
