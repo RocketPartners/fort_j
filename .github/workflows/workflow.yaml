@@ -8,6 +8,7 @@ jobs:
     env:
       GHP_USER: ${{ secrets.GHP_USER }}
       GHP_PASSWORD: ${{ secrets.GHP_PASSWORD }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
     steps:
       - name: Setup Java
         uses: actions/setup-java@v3
