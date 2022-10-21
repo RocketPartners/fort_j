@@ -1,21 +1,21 @@
-# fort_j
-Generic Java Utility Classes / Methods
+# Rocket Java
 
-### Info
-* Version is currently set to 0.0.1
-* Group is currently wellsb1 
+Rocket Java is a fork of fort_j, a collection of Java utilities.
 
-### Helpful Commands
-###### (in no particular order)
-* 'gradle eclipse' to convert this project into an eclipse project
-* 'gradle install' to install this project's jar into a local maven repository for use by other projects
+## Build
 
+To build:
 
-### Change Log
+```
+./gradlew assemble
+```
 
-5/14/18 - 0.0.3
- * Updated Lang.empty() to support varargs
+## Publish
 
-5/09/18 - 0.0.2
- 
- * Changed method signature on J.explode()
+To publish:
+
+```
+export GHP_USER=<user>
+export GHP_PASSWORD=<token>
+./gradlew publish
+```
