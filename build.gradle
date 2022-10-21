@@ -8,59 +8,59 @@ version = "1.0.0"
 sourceCompatibility = "1.6"
 
 ext {
-	// Run bash commands.
-	//
-	// opts:
-	// args -- command-line arguments
-	// captureOutput -- if true, return output (default: false)
-	// env -- Map of environment variables
-	// ignoreExitValue -- if true, fail when exit != 0 (default: false)
-	// quiet -- if true, don't print command-line (default: false)
+   // Run bash commands.
+   //
+   // opts:
+   // args -- command-line arguments
+   // captureOutput -- if true, return output (default: false)
+   // env -- Map of environment variables
+   // ignoreExitValue -- if true, fail when exit != 0 (default: false)
+   // quiet -- if true, don't print command-line (default: false)
    // workingDir -- working directory
-	bash = { opts = [:] ->
+   bash = { opts = [:] ->
       opts += [
          captureOutput: opts.captureOutput == null ? false : opts.captureOutput,
          ignoreExitValue: opts.ignoreExitValue == null ? false : opts.ignoreExitValue,
          quiet: opts.quiet == null ? false : opts.quiet
       ]
 
-		def output
+      def output
 
-		try {
-			exec {
-				if (opts.captureOutput) {
+      try {
+         exec {
+            if (opts.captureOutput) {
                standardOutput = new ByteArrayOutputStream()
                output = { -> standardOutput.toString() }
             }
 
-				ignoreExitValue = opts.ignoreExitValue
-				opts.env?.each { key, val -> environment key, val }
-				opts.workingDir && workingDir(opts.workingDir)
-				commandLine = [ "bash", "-o", "pipefail", "-c", "${opts.args?.trim()} 2>&1" ]
-				opts.quiet || println(commandLine.join(" "))
-			}
+            ignoreExitValue = opts.ignoreExitValue
+            opts.env?.each { key, val -> environment key, val }
+            opts.workingDir && workingDir(opts.workingDir)
+            commandLine = [ "bash", "-o", "pipefail", "-c", "${opts.args?.trim()} 2>&1" ]
+            opts.quiet || println(commandLine.join(" "))
+         }
 
-		   if (opts.captureOutput) { output() }
-		} catch (e) {
-			if (opts.captureOutput) { println(output()) }
-			throw e
-		}
-	}
+         if (opts.captureOutput) { output() }
+      } catch (e) {
+         if (opts.captureOutput) { println(output()) }
+         throw e
+      }
+   }
 
-	// Run git commands.
-	//
-	// opts:
-	// args -- command-line args
-	// defaultValue -- value to return if no output or error
-	git = { opts=[:] ->
-		try {
-			def result = file(".git").exists() ? bash(opts + [args: "git ${opts.args}".trim()]) : ""
-			result ?: opts.defaultValue
-		} catch(Exception e) {
-			if (opts.defaultValue) { return opts.defaultValue }
-			throw e
-		}
-	}
+   // Run git commands.
+   //
+   // opts:
+   // args -- command-line args
+   // defaultValue -- value to return if no output or error
+   git = { opts=[:] ->
+      try {
+         def result = file(".git").exists() ? bash(opts + [args: "git ${opts.args}".trim()]) : ""
+         result ?: opts.defaultValue
+      } catch(Exception e) {
+         if (opts.defaultValue) { return opts.defaultValue }
+         throw e
+      }
+   }
 
    // Get git author.
    //
@@ -84,7 +84,7 @@ ext {
    println "archiveRepo: $archiveRepo"
 
    branch = git(args: "rev-parse --abbrev-ref HEAD", captureOutput: true, ignoreExitValue: false,
-		defaultValue: "(branch)")?.trim()
+      defaultValue: "(branch)")?.trim()
    !isReleaseBranch() && (project.version += "-SNAPSHOT")
 }
 
@@ -103,31 +103,37 @@ repositories {
 }
 
 uploadArchives {
-	repositories {
-		mavenDeployer {
-			repository(url: archiveRepo.url) {
-				authentication(userName: archiveRepo.user, password: archiveRepo.password)
-			}
-		}
-	}
+   repositories {
+      mavenDeployer {
+         repository(url: archiveRepo.url) {
+            authentication(userName: archiveRepo.user, password: archiveRepo.password)
+         }
+      }
+   }
 
-	doFirst {
-		println "${jar.archiveName} -> ${archiveRepo.url}"
-	}
+   doFirst {
+      println "${jar.archiveName} -> ${archiveRepo.url}"
+   }
 }
 
-task gitTag {
+task tag {
    enabled = isReleaseBranch()
-   mustRunAfter uploadArchives
 
    doLast {
       git args: "config user.name '${gitGetAuthor()}'"
       git args: "config user.email ${gitGetAuthor(format: '%ae')}"
       git args: "tag -am 'tag ${project.version}' ${project.version}"
+   }
+}
+
+task pushTags {
+   mustRunAfter uploadArchives
+
+   doLast {
       git args: "push --tags"
    }
 }
 
 task publish {
-   dependsOn uploadArchives, gitTag
+   dependsOn uploadArchives, pushTags
 }

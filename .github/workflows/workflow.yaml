@@ -19,6 +19,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Tag
+        run: ./gradlew tag
+
       - name: Build
         run: ./gradlew clean assemble
 
@@ -31,6 +34,7 @@ jobs:
         with:
           payload: |
             {
+              "emoji": "${{ job.status == 'success' && ':large_green_circle:' || ':red_circle:' }}",
               "message": "${{ job.status }}",
               "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             }
