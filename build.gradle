@@ -76,11 +76,11 @@ ext {
       opts.branch ==~ /^main$|^master$|^release-.*/
    }
 
-   archiveRepo = [
-      url: "https://maven.pkg.github.com/RocketPartners/artifacts",
-      user: "sergiovizcaino",
-      password: "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"
-   ]
+    archiveRepo = [
+            url: "https://maven.pkg.github.com/RocketPartners/artifacts",
+            user: System.env.GHP_USER,
+            password: System.env.GHP_PASSWORD
+    ]
 
    branch = git(args: "rev-parse --abbrev-ref HEAD", captureOutput: true, ignoreExitValue: false,
       defaultValue: "(branch)")?.trim()
