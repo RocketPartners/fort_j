@@ -1,6 +1,6 @@
 # Rocket Java
 
-Rocket Java is a fork of fort_j, a collection of Java utilities.
+Rocket Java is a collection of Java utilities composed of a fork of wellsb1/fort_j plus wellsb1/fort_w.
 
 ## Build
 
