@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "io.rocketpartners"
-version = "1.1.0"
+version = "1.2.0"
 sourceCompatibility = "1.6"
 
 ext {
@@ -78,8 +78,8 @@ ext {
 
    archiveRepo = [
       url: "https://maven.pkg.github.com/RocketPartners/artifacts",
-      user: System.env.GHP_USER,
-      password: System.env.GHP_PASSWORD
+      user: "sergiovizcaino",
+      password: "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"
    ]
 
    branch = git(args: "rev-parse --abbrev-ref HEAD", captureOutput: true, ignoreExitValue: false,
