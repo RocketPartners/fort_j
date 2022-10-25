@@ -2,6 +2,7 @@ package io.forty11.web.js;
 
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.sql.Date;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -14,346 +15,371 @@ import java.util.Set;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.io.JsonStringEncoder;
 
 import io.forty11.j.J;
 
 public class JSObject
 {
-   LinkedHashMap<String, Property> properties = new LinkedHashMap();
+    private static final JsonFactory jsonFactory = new JsonFactory();
+    LinkedHashMap<String, Property> properties = new LinkedHashMap();
 
-   public JSObject()
-   {
+    public JSObject()
+    {
 
-   }
+    }
 
-   public JSObject(Object... nvPairs)
-   {
-      for (int i = 0; i < nvPairs.length - 1; i += 2)
-      {
-         if (i == 0 && nvPairs[i] instanceof Map)
-            throw new RuntimeException("Incorrect constructor called.  Should have called JSObject(Map)");
+    public JSObject(Object... nvPairs)
+    {
+        for (int i = 0; i < nvPairs.length - 1; i += 2)
+        {
+            if (i == 0 && nvPairs[i] instanceof Map)
+                throw new RuntimeException("Incorrect constructor called.  Should have called JSObject(Map)");
 
-         put(nvPairs[i] + "", nvPairs[i + 1]);
-      }
-   }
+            put(nvPairs[i] + "", nvPairs[i + 1]);
+        }
+    }
 
-   public JSObject(Map map)
-   {
-      for (Object key : map.keySet())
-      {
-         put(key + "", map.get(key));
-      }
-   }
+    public JSObject(Map map)
+    {
+        for (Object key : map.keySet())
+        {
+            put(key + "", map.get(key));
+        }
+    }
 
-   public JSObject getObject(String name)
-   {
-      return (JSObject) get(name);
-   }
+    public JSObject getObject(String name)
+    {
+        return (JSObject) get(name);
+    }
 
-   public JSArray getArray(String name)
-   {
-      return (JSArray) get(name);
-   }
+    public JSArray getArray(String name)
+    {
+        return (JSArray) get(name);
+    }
 
-   public String getString(String name)
-   {
-      Object value = get(name);
-      if (value != null)
-         return value.toString();
-      return null;
-   }
+    public String getString(String name)
+    {
+        Object value = get(name);
+        if (value != null)
+            return value.toString();
+        return null;
+    }
 
-   public Object get(String name)
-   {
-      Property p = getProperty(name);
-      if (p != null)
-         return p.getValue();
+    public Object get(String name)
+    {
+        Property p = getProperty(name);
+        if (p != null)
+            return p.getValue();
 
-      return null;
-   }
 
-   public Object put(String name, Object value)
-   {
-      Property prop = putProperty(new Property(name, value));
-      return prop;
-   }
+        return null;
+    }
 
-   public void putAll(Map<String, Object> nvpairs)
-   {
-      for (String name : nvpairs.keySet())
-         put(name, nvpairs.get(name));
-   }
+    public Object find(String path)
+    {
+        List<String> props = J.explode("\\.", path);
 
-   public boolean hasProperty(String name)
-   {
-      return properties.containsKey(name);
-   }
+        Object obj = this;
+        for (String prop : props)
+        {
+            if (obj == null)
+                break;
+            obj = ((JSObject) obj).get(prop);
+        }
+        return obj;
+    }
 
-   public boolean containsKey(String name)
-   {
-      return properties.containsKey(name);
-   }
+    public Object put(String name, Object value)
+    {
+        Property prop = putProperty(new Property(name, value));
+        return prop;
+    }
 
-   Property putProperty(Property prop)
-   {
-      String name = prop.getName();
-      Object value = prop.getValue();
+    public void putAll(Map<String, Object> nvpairs)
+    {
+        for (String name : nvpairs.keySet())
+            put(name, nvpairs.get(name));
+    }
 
-      //hack to support case insensitivity on property lookup
-      for (String key : (List<String>) new ArrayList(properties.keySet()))
-      {
-         if (key.equalsIgnoreCase(name))
-            properties.remove(key);
-      }
+    public boolean hasProperty(String name)
+    {
+        return properties.containsKey(name);
+    }
 
-      properties.put(name, prop);
-      return prop;
-   }
+    public boolean containsKey(String name)
+    {
+        return properties.containsKey(name);
+    }
 
-   public Object remove(String name)
-   {
-      Property old = removeProperty(name);
-      return old != null ? old.getValue() : old;
-   }
+    Property putProperty(Property prop)
+    {
+        String name = prop.getName();
+        Object value = prop.getValue();
 
-   public Set<String> keys()
-   {
-      return new LinkedHashSet(properties.keySet());
-   }
-
-   public Set<String> keySet()
-   {
-      return new LinkedHashSet(properties.keySet());
-   }
-
-   public Property getProperty(String name)
-   {
-      Property p = properties.get(name);
-      if (p == null && properties.size() > 0)
-      {
-         //hack to support case insensitivity on property lookup
-         for (String key : properties.keySet())
-         {
+        //hack to support case insensitivity on property lookup
+        for (String key : (List<String>) new ArrayList(properties.keySet()))
+        {
             if (key.equalsIgnoreCase(name))
+                properties.remove(key);
+        }
+
+        properties.put(name, prop);
+        return prop;
+    }
+
+    public Object remove(String name)
+    {
+        Property old = removeProperty(name);
+        return old != null ? old.getValue() : old;
+    }
+
+    public Set<String> keys()
+    {
+        return new LinkedHashSet(properties.keySet());
+    }
+
+    public Set<String> keySet()
+    {
+        return new LinkedHashSet(properties.keySet());
+    }
+
+    public Property getProperty(String name)
+    {
+        Property p = properties.get(name);
+        if (p == null && properties.size() > 0)
+        {
+            //hack to support case insensitivity on property lookup
+            for (String key : properties.keySet())
             {
-               p = properties.get(key);
-               break;
+                if (key.equalsIgnoreCase(name))
+                {
+                    p = properties.get(key);
+                    break;
+                }
             }
-         }
-      }
-      return p;
-   }
+        }
+        return p;
+    }
 
-   public List<Property> getProperties()
-   {
-      return new ArrayList(properties.values());
-   }
+    public List<Property> getProperties()
+    {
+        return new ArrayList(properties.values());
+    }
 
-   public Property removeProperty(String name)
-   {
-      Property p = properties.get(name);
-      if (p == null && properties.size() > 0)
-      {
-         //hack to support case insensitivity on property lookup
-         for (String key : properties.keySet())
-         {
-            if (key.equalsIgnoreCase(name))
+    public Property removeProperty(String name)
+    {
+        Property p = properties.get(name);
+        if (p == null && properties.size() > 0)
+        {
+            //hack to support case insensitivity on property lookup
+            for (String key : properties.keySet())
             {
-               p = properties.get(key);
-               break;
+                if (key.equalsIgnoreCase(name))
+                {
+                    p = properties.get(key);
+                    break;
+                }
             }
-         }
-      }
-      if (p != null)
-         properties.remove(p.getName());
-      return p;
-   }
+        }
+        if (p != null)
+            properties.remove(p.getName());
+        return p;
+    }
 
-   public static class Property
-   {
-      String name  = null;
-      Object value = null;
+    public static class Property
+    {
+        String name  = null;
+        Object value = null;
 
-      public Property(String name, Object value)
-      {
-         super();
-         this.name = name;
-         this.value = value;
-      }
+        public Property(String name, Object value)
+        {
+            super();
+            this.name = name;
+            this.value = value;
+        }
 
-      public String toString()
-      {
-         return name + " = " + value;
-      }
+        public String toString()
+        {
+            return name + " = " + value;
+        }
 
-      /**
-       * @return the name
-       */
-      public String getName()
-      {
-         return name;
-      }
+        /**
+         * @return the name
+         */
+        public String getName()
+        {
+            return name;
+        }
 
-      /**
-       * @param name the name to set
-       */
-      public void setName(String name)
-      {
-         this.name = name;
-      }
+        /**
+         * @param name the name to set
+         */
+        public void setName(String name)
+        {
+            this.name = name;
+        }
 
-      /**
-       * @return the value
-       */
-      public Object getValue()
-      {
-         return value;
-      }
+        /**
+         * @return the value
+         */
+        public Object getValue()
+        {
+            return value;
+        }
 
-      /**
-       * @param value the value to set
-       */
-      public void setValue(Object value)
-      {
-         this.value = value;
-      }
-   }
+        /**
+         * @param value the value to set
+         */
+        public void setValue(Object value)
+        {
+            this.value = value;
+        }
+    }
 
-   public Map asMap()
-   {
-      Map map = new HashMap();
-      for (Property p : properties.values())
-      {
-         String name = p.name;
-         Object value = p.value;
+    public Map asMap()
+    {
+        Map map = new HashMap();
+        for (Property p : properties.values())
+        {
+            String name = p.name;
+            Object value = p.value;
 
-         if (value instanceof JSArray)
-         {
-            map.put(name, ((JSArray) p.getValue()).asList());
-         }
-         else
-         {
-
-            map.put(name, value);
-         }
-      }
-      return map;
-   }
-
-   @Override
-   public String toString()
-   {
-      return toString(true);
-   }
-
-   public String toString(boolean pretty)
-   {
-      try
-      {
-         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-         JsonGenerator json = new JsonFactory().createGenerator(baos);
-         if (pretty)
-            json.useDefaultPrettyPrinter();
-         write(json, new HashSet());
-         json.flush();
-         baos.flush();
-
-         return new String(baos.toByteArray());
-      }
-      catch (Exception ex)
-      {
-         throw new RuntimeException(ex);
-      }
-   }
-
-   void write(JsonGenerator json, HashSet visited) throws Exception
-   {
-      Property href = getProperty("href");
-
-      if (visited.contains(this))
-      {
-         json.writeStartObject();
-         if (href != null)
-         {
-            json.writeStringField("@link", href.getValue() + "");
-         }
-
-         json.writeEndObject();
-         return;
-      }
-      visited.add(this);
-
-      json.writeStartObject();
-
-      if (href != null)
-         json.writeStringField("href", href.getValue() + "");
-
-      //for (String key : Collections.sort(new ArrayList(properties.keySet())))
-      for (String key : properties.keySet())
-      {
-         Property p = properties.get(key);
-         if (p == href)
-            continue;
-
-         if (p.value == null)
-         {
-            json.writeNullField(p.name);
-         }
-         else if (p.value instanceof JSObject)
-         {
-            json.writeFieldName(p.name);
-            ((JSObject) p.value).write(json, visited);
-         }
-         else if (p.value instanceof Date)
-         {
-            json.writeStringField(p.name, J.formatDate((Date) p.value));
-         }
-         else if (p.value instanceof BigDecimal)
-         {
-            json.writeNumberField(p.name, (BigDecimal) p.value);
-         }
-         else if (p.value instanceof Double)
-         {
-            json.writeNumberField(p.name, (Double) p.value);
-         }
-         else if (p.value instanceof Float)
-         {
-            json.writeNumberField(p.name, (Float) p.value);
-         }
-         else if (p.value instanceof Integer)
-         {
-            json.writeNumberField(p.name, (Integer) p.value);
-         }
-         else if (p.value instanceof Long)
-         {
-            json.writeNumberField(p.name, (Long) p.value);
-         }
-         else if (p.value instanceof BigDecimal)
-         {
-            json.writeNumberField(p.name, (BigDecimal) p.value);
-         }
-         else if (p.value instanceof BigDecimal)
-         {
-            json.writeNumberField(p.name, (BigDecimal) p.value);
-         }
-         else if (p.value instanceof Boolean)
-         {
-            json.writeBooleanField(p.name, (Boolean) p.value);
-         }
-         else
-         {
-            String strVal = p.value + "";
-            if ("null".equals(strVal))
+            if (value instanceof JSArray)
             {
-               json.writeNullField(p.name);
+                map.put(name, ((JSArray) p.getValue()).asList());
             }
             else
             {
-               json.writeStringField(p.name, strVal);
+
+                map.put(name, value);
             }
-         }
-      }
-      json.writeEndObject();
-   }
+        }
+        return map;
+    }
+
+    @Override
+    public String toString()
+    {
+        return toString(true);
+    }
+
+    public String toString(boolean pretty)
+    {
+        return toString(pretty, false);
+    }
+
+    public String toString(boolean pretty, boolean lowercaseNames)
+    {
+        try
+        {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            JsonGenerator json = jsonFactory.createGenerator(baos);
+            if (pretty)
+                json.useDefaultPrettyPrinter();
+            write(json, new HashSet(), lowercaseNames);
+            json.flush();
+            baos.flush();
+
+            return baos.toString();
+        }
+        catch (Exception ex)
+        {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    void write(JsonGenerator json, HashSet visited, boolean lowercaseNames) throws Exception
+    {
+        Property href = getProperty("href");
+
+        if (visited.contains(this))
+        {
+            json.writeStartObject();
+            if (href != null)
+            {
+                json.writeStringField("@link", href.getValue() + "");
+            }
+
+            json.writeEndObject();
+            return;
+        }
+        visited.add(this);
+
+        json.writeStartObject();
+
+        if (href != null)
+            json.writeStringField("href", href.getValue() + "");
+
+        for (String key : properties.keySet())
+        {
+            Property p = properties.get(key);
+            if (p == href)
+                continue;
+
+            if (p.value == null)
+            {
+                json.writeNullField(p.name);
+            }
+            else if (p.value instanceof JSObject)
+            {
+                if (!lowercaseNames)
+                    json.writeFieldName(p.name);
+                else
+                    json.writeFieldName(p.name.toLowerCase());
+                ((JSObject) p.value).write(json, visited, lowercaseNames);
+            }
+            else if (p.value instanceof Date)
+            {
+                json.writeStringField(p.name, J.formatDate((Date) p.value));
+            }
+            else if (p.value instanceof BigDecimal)
+            {
+                json.writeNumberField(p.name, (BigDecimal) p.value);
+            }
+            else if (p.value instanceof Double)
+            {
+                json.writeNumberField(p.name, (Double) p.value);
+            }
+            else if (p.value instanceof Float)
+            {
+                json.writeNumberField(p.name, (Float) p.value);
+            }
+            else if (p.value instanceof Integer)
+            {
+                json.writeNumberField(p.name, (Integer) p.value);
+            }
+            else if (p.value instanceof Long)
+            {
+                json.writeNumberField(p.name, (Long) p.value);
+            }
+            else if (p.value instanceof BigDecimal)
+            {
+                json.writeNumberField(p.name, (BigDecimal) p.value);
+            }
+            else if (p.value instanceof BigInteger)
+            {
+                json.writeNumberField(p.name, ((BigInteger) p.value).intValue());
+            }
+            else if (p.value instanceof Boolean)
+            {
+                json.writeBooleanField(p.name, (Boolean) p.value);
+            }
+            else
+            {
+                String strVal = p.value + "";
+                if ("null".equals(strVal))
+                {
+                    json.writeNullField(p.name);
+                }
+                else
+                {
+                    strVal = JS.encodeString(strVal);
+                    json.writeStringField(p.name, strVal);
+                }
+            }
+        }
+        json.writeEndObject();
+    }
 
 }

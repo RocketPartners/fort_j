@@ -5,185 +5,217 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import io.forty11.j.J;
 
 public class UrlBuilder
 {
 
-   String       protocol = null;
-   String       host     = null;
-   Integer      port     = null;
-   String       path     = null;
+    String       protocol = null;
+    String       host     = null;
+    Integer      port     = null;
+    String       path     = null;
 
-   List<NVPair> query    = new ArrayList();
+    List<NVPair> query    = new ArrayList();
 
-   public UrlBuilder()
-   {
+    public UrlBuilder()
+    {
 
-   }
+    }
 
-   public UrlBuilder(String protocol, String host, Integer port, String path, Object... params)
-   {
-      this.protocol = protocol;
-      this.host = host;
-      this.port = port;
-      this.path = path;
+    public UrlBuilder(String url)
+    {
+        this(new Url(url));
+    }
 
-      List plist = null;
-      if (params != null)
-      {
-         plist = Arrays.asList(params);
-         if (plist.size() > 0 && plist.get(0) instanceof Collection)
-         {
-            plist = new ArrayList((Collection) plist.get(0));
-         }
-      }
+    public UrlBuilder(Url url)
+    {
+        protocol = url.getProtocol();
+        host = url.getHost();
+        port = url.getPort();
+        path = url.getPath();
+    }
 
-      for (int i = 0; plist != null && i < plist.size(); i += 2)
-      {
-         query.add(new NVPair(plist.get(i) + "", plist.get(i + 1) == null ? null : (plist.get(i + 1) + "")));
-      }
-   }
+    public UrlBuilder(String protocol, String host, Integer port, String path, Object... params)
+    {
+        this.protocol = protocol;
+        this.host = host;
+        this.port = port;
+        this.path = path;
 
-   public UrlBuilder(Url url)
-   {
-      protocol = url.getProtocol();
-      host = url.getHost();
-      port = url.getPort();
-      path = url.getPath();
-   }
+        List plist = null;
+        if (params != null)
+        {
+            plist = Arrays.asList(params);
+            if (plist.size() > 0 && plist.get(0) instanceof Collection)
+            {
+                plist = new ArrayList((Collection) plist.get(0));
+            }
+        }
 
-   public String getHost()
-   {
-      return host;
-   }
+        for (int i = 0; plist != null && i < plist.size(); i += 2)
+        {
+            query.add(new NVPair(plist.get(i) + "", plist.get(i + 1) == null ? null : (plist.get(i + 1) + "")));
+        }
+    }
 
-   public UrlBuilder withHost(String host)
-   {
-      host = host.replace("/", "");
-      this.host = host;
-      return this;
-   }
+    public String toString()
+    {
+        return toUrl().toString();
+    }
 
-   public Integer getPort()
-   {
-      return port;
-   }
+    public String getHost()
+    {
+        return host;
+    }
 
-   public UrlBuilder withPort(Integer port)
-   {
-      this.port = port;
-      return this;
-   }
+    public UrlBuilder withHost(String host)
+    {
+        host = host.replace("/", "");
+        this.host = host;
+        return this;
+    }
 
-   public String getProtocol()
-   {
-      return protocol;
-   }
+    public Integer getPort()
+    {
+        return port;
+    }
 
-   public UrlBuilder withProtocol(String protocol)
-   {
-      this.protocol = protocol;
-      return this;
-   }
+    public UrlBuilder withPort(Integer port)
+    {
+        this.port = port;
+        return this;
+    }
 
-   public String getPath()
-   {
-      return path;
-   }
+    public String getProtocol()
+    {
+        return protocol;
+    }
 
-   public UrlBuilder withPath(String path)
-   {
-      this.path = path;
-      if (!path.startsWith("/"))
-         path += "/";
+    public UrlBuilder withProtocol(String protocol)
+    {
+        this.protocol = protocol;
+        return this;
+    }
 
-      return this;
-   }
+    public String getPath()
+    {
+        return path;
+    }
 
-   public UrlBuilder withParam(String name, String value)
-   {
-      try
-      {
-         query.add(new NVPair(URLEncoder.encode(name, "UTF-8"), value != null ? URLEncoder.encode(value, "UTF-8") : null));
-      }
-      catch (Exception ex)
-      {
-         J.rethrow(ex);
-      }
-      return this;
-   }
+    public UrlBuilder withPath(String path)
+    {
+        this.path = path;
+        if (!path.startsWith("/"))
+            path += "/";
 
-   public Url toUrl()
-   {
-      String url = "";
+        return this;
+    }
 
-      if (host != null)
-      {
-         url += protocol != null ? protocol : "http";
-         url += "://";
-         url += host;
-         if (port != null)
-         {
-            url += ":" + port;
-         }
-      }
+    public UrlBuilder addPath(String dir)
+    {
+        if (path == null)
+            path = "/";
 
-      if (path != null)
-      {
-         url += path;
-      }
+        if (!path.startsWith("/"))
+            path = "/" + path;
 
-      for (int i = 0; i < query.size(); i++)
-      {
-         if (i == 0)
-            url += "?";
+        if (!path.endsWith("/"))
+            path += "/";
 
-         NVPair pair = query.get(i);
-         if (pair.value == null)
-            url += pair.name;
-         else
-            url += pair.name + "=" + pair.value;
+        while (dir.startsWith("/"))
+            dir = dir.substring(1);
 
-         if (i < query.size() - 1)
-            url += "&";
-      }
+        path += dir;
 
-      return new Url(url);
-   }
+        if (!path.endsWith("/"))
+            path += "/";
 
-   public class NVPair
-   {
-      String name  = null;
-      String value = null;
+        return this;
+    }
 
-      public NVPair(String name, String value)
-      {
-         super();
-         this.name = name;
-         this.value = value;
-      }
+    /**
+     * Parses queryString and adds the nvpairs to query.
+     */
+    public UrlBuilder withQuery(String queryString)
+    {
+        Map<String, String> params = Url.parseQuery(queryString);
+        for (String key : params.keySet())
+        {
+            query.add(new NVPair(key, params.get(key)));
+        }
+        return this;
+    }
 
-      public String getName()
-      {
-         return name;
-      }
+    public UrlBuilder withParam(String name, String value)
+    {
+        try
+        {
+            query.add(new NVPair(URLEncoder.encode(name, "UTF-8"), value != null ? URLEncoder.encode(value, "UTF-8") : null));
+        }
+        catch (Exception ex)
+        {
+            J.rethrow(ex);
+        }
+        return this;
+    }
 
-      public void setName(String name)
-      {
-         this.name = name;
-      }
+    public Url toUrl()
+    {
+        String queryStr = null;
+        if (query != null && query.size() > 0)
+        {
+            queryStr = "";
+            for (int i = 0; i < query.size(); i++)
+            {
+                NVPair pair = query.get(i);
+                if (J.empty(pair.value))
+                    queryStr += pair.name;
+                else
+                    queryStr += pair.name + "=" + pair.value;
 
-      public String getValue()
-      {
-         return value;
-      }
+                if (i < query.size() - 1)
+                    queryStr += "&";
+            }
+        }
 
-      public void setValue(String value)
-      {
-         this.value = value;
-      }
+        Url u = new Url(this.protocol, this.host, this.port, this.path, queryStr);
+        return u;
 
-   }
+    }
+
+    public class NVPair
+    {
+        String name  = null;
+        String value = null;
+
+        public NVPair(String name, String value)
+        {
+            super();
+            this.name = name;
+            this.value = value;
+        }
+
+        public String getName()
+        {
+            return name;
+        }
+
+        public void setName(String name)
+        {
+            this.name = name;
+        }
+
+        public String getValue()
+        {
+            return value;
+        }
+
+        public void setValue(String value)
+        {
+            this.value = value;
+        }
+
+    }
 }
