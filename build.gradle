@@ -84,7 +84,7 @@ ext {
 
    branch = git(args: "rev-parse --abbrev-ref HEAD", captureOutput: true, ignoreExitValue: false,
       defaultValue: "(branch)")?.trim()
-   !isReleaseBranch() && (project.version += "-SNAPSHOT")
+   !isReleaseBranch() && (project.version += "-$branch-SNAPSHOT")
 }
 
 repositories {
